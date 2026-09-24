@@ -3,16 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Master Library Compiler</title>
+    <title>Instant Arcade Matrix</title>
     <style>
         :root {
-            --bg: #09090b;
-            --panel: #18181b;
-            --accent: #2563eb;
-            --accent-hover: #1d4ed8;
-            --success: #16a34a;
+            --bg: #0b0b0e;
+            --panel: #141419;
+            --accent: #10b981;
+            --accent-hover: #059669;
             --text: #f4f4f5;
-            --muted: #a1a1aa;
+            --muted: #71717a;
             --border: #27272a;
         }
         body {
@@ -20,161 +19,201 @@
             background-color: var(--bg);
             color: var(--text);
             margin: 0;
-            padding: 1.5rem;
             display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            box-sizing: border-box;
+            height: 100vh;
+            overflow: hidden;
         }
-        .compiler-box {
+        /* Left Hand Side Menu Control panel */
+        .sidebar {
+            width: 320px;
             background-color: var(--panel);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 2rem;
-            max-width: 550px;
-            width: 100%;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
             box-sizing: border-box;
         }
-        h1 { margin: 0 0 0.5rem 0; font-size: 1.6rem; color: #fff; text-align: center; }
-        .subtitle { color: var(--muted); text-align: center; font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.5; }
+        h2 { margin: 0 0 1rem 0; font-size: 1.3rem; display: flex; align-items: center; gap: 0.5rem; }
         
-        .upload-zone {
-            border: 2px dashed var(--border);
-            border-radius: 12px;
-            padding: 1.5rem;
+        .upload-btn {
+            background: #27272a;
+            border: 1px dashed var(--muted);
+            padding: 0.75rem;
+            border-radius: 8px;
             text-align: center;
             cursor: pointer;
-            transition: border-color 0.2s;
-            background: rgba(24, 24, 27, 0.5);
-            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
             display: block;
+            margin-bottom: 1rem;
         }
-        .upload-zone:hover { border-color: var(--accent); }
-        .upload-zone p { margin: 0; font-size: 0.95rem; font-weight: 500; }
-        .upload-zone span { display: block; font-size: 0.75rem; color: var(--muted); margin-top: 0.4rem; }
+        .upload-btn:hover { border-color: var(--accent); color: var(--accent); }
         input[type="file"] { display: none; }
-
-        .progress-container { display: none; margin-bottom: 1.5rem; }
-        .progress-bar-bg { background: #27272a; border-radius: 6px; height: 10px; width: 100%; overflow: hidden; }
-        .progress-bar-fill { background: var(--accent); height: 100%; width: 0%; }
-        .progress-text { font-size: 0.8rem; color: var(--muted); display: flex; justify-content: space-between; margin-top: 0.5rem; }
-
-        .compile-btn {
-            background-color: var(--accent);
+        
+        .search-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
             color: #fff;
-            border: none;
-            width: 100%;
-            padding: 0.85rem;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.2s;
+            padding: 0.6rem 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            outline: none;
+            font-size: 0.9rem;
         }
-        .compile-btn:hover { background-color: var(--accent-hover); }
-        .compile-btn:disabled { background-color: #27272a; color: var(--muted); cursor: not-allowed; }
+        .search-box:focus { border-color: var(--accent); }
 
-        .success-box {
-            display: none;
-            background: rgba(22, 163, 74, 0.1);
-            border: 1px solid var(--success);
-            padding: 1rem;
-            border-radius: 8px;
-            color: #fff;
-            font-size: 0.85rem;
-            margin-top: 1.5rem;
-            text-align: center;
+        .game-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .game-item {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid transparent;
+            padding: 0.6rem 0.8rem;
+            text-align: left;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-transform: capitalize;
+        }
+        .game-item:hover { background: #27272a; }
+        .game-item.active { background: var(--accent); color: #000; font-weight: 600; }
+
+        /* Right Hand Side Interactive Simulation Screen */
+        .stage {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg);
+            position: relative;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #fff;
+        }
+        .welcome-banner {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center; color: var(--muted);
+            pointer-events: none;
+            width: 80%;
         }
     </style>
 </head>
 <body>
 
-    <div class="compiler-box">
-        <h1>Master Library Compiler</h1>
-        <div class="subtitle">Select your game files at once. This script compiles them into a single unified index.html file for GitHub Pages.</div>
-        
-        <label class="upload-zone">
-            <p>📂 Select Game HTML Files</p>
-            <span>Click and press Ctrl+A to select multiple files at once</span>
-            <input type="file" id="filePicker" accept=".html" multiple>
+    <div class="sidebar">
+        <h2>🕹️ Game Matrix</h2>
+        <label class="upload-btn">
+            📂 Load HTML Game Files
+            <input type="file" id="matrixPicker" accept=".html" multiple>
         </label>
+        <input type="text" id="matrixSearch" class="search-box" placeholder="Search loaded matrix..." disabled>
+        <div id="statusIndicator" style="display:none; color:var(--accent); font-size:0.85rem; margin-bottom:1rem;">Reading game stream...</div>
+        <div class="game-list" id="matrixContainer"></div>
+    </div>
 
-        <div class="progress-container" id="progressArea">
-            <div class="progress-bar-bg">
-                <div class="progress-bar-fill" id="progressBar"></div>
-            </div>
-            <div class="progress-text">
-                <span id="statusLabel">Reading files...</span>
-                <span id="percentageLabel">0%</span>
-            </div>
+    <div class="stage">
+        <div class="welcome-banner" id="welcomeBanner">
+            <h3>No Games Active In Matrix</h3>
+            <p>Click <strong>"Load HTML Game Files"</strong>, press <strong>Ctrl + A</strong> to grab your unzipped folder assets, and populate your canvas immediately.</p>
         </div>
-
-        <button class="compile-btn" id="compileBtn" onclick="compileLibrary()" disabled>Compile & Download Giant Library</button>
-        <div class="success-box" id="successBox">🎉 Compilation Complete! Check your Downloads folder for index.html.</div>
+        <iframe id="matrixFrame" style="display: none;" sandbox="allow-scripts allow-same-origin"></iframe>
     </div>
 
     <script>
-        let compiledData = {};
-        const filePicker = document.getElementById('filePicker');
-        const compileBtn = document.getElementById('compileBtn');
-        const progressArea = document.getElementById('progressArea');
-        const progressBar = document.getElementById('progressBar');
-        const statusLabel = document.getElementById('statusLabel');
-        const percentageLabel = document.getElementById('percentageLabel');
-        const successBox = document.getElementById('successBox');
+        let loadedMatrixData = {}; 
+        const matrixPicker = document.getElementById('matrixPicker');
+        const matrixSearch = document.getElementById('matrixSearch');
+        const matrixContainer = document.getElementById('matrixContainer');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const matrixFrame = document.getElementById('matrixFrame');
+        const welcomeBanner = document.getElementById('welcomeBanner');
 
-        filePicker.addEventListener('change', function(e) {
+        function readFile(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve({ name: file.name, content: e.target.result, success: true });
+                reader.onerror = () => resolve({ success: false });
+                reader.readAsText(file);
+            });
+        }
+
+        matrixPicker.addEventListener('change', async function(e) {
             const files = Array.from(e.target.files);
             if (files.length === 0) return;
 
-            compiledData = {};
-            progressArea.style.display = 'block';
-            successBox.style.display = 'none';
-            compileBtn.disabled = true;
+            statusIndicator.style.display = 'block';
+            matrixContainer.innerHTML = '';
+            loadedMatrixData = {};
 
-            let loadedCount = 0;
-            const totalFiles = files.length;
+            const htmlFiles = files.filter(f => f.name.toLowerCase().endsWith('.html'));
+            const batchSize = 25;
 
-            files.forEach(file => {
-                const reader = new FileReader();
-                reader.onload = function(evt) {
-                    let cleanName = file.name.replace('.html', '').replace(/-/g, ' ');
-                    compiledData[cleanName] = evt.target.result;
-                    
-                    loadedCount++;
-                    let pct = Math.floor((loadedCount / totalFiles) * 100);
-                    progressBar.style.width = pct + '%';
-                    percentageLabel.textContent = pct + '%';
-                    statusLabel.textContent = `Loaded ${loadedCount} of ${totalFiles}...`;
-
-                    if (loadedCount === totalFiles) {
-                        statusLabel.textContent = `All ${totalFiles} files ready to compile!`;
-                        compileBtn.disabled = false;
+            for (let i = 0; i < htmlFiles.length; i += batchSize) {
+                const chunk = htmlFiles.slice(i, i + batchSize);
+                const parsedResults = await Promise.all(chunk.map(file => readFile(file)));
+                
+                parsedResults.forEach(res => {
+                    if (res.success) {
+                        let cleanTitle = res.name.replace('.html', '').replace(/-/g, ' ');
+                        loadedMatrixData[cleanTitle] = res.content;
                     }
-                };
-                reader.readAsText(file);
-            });
+                });
+                
+                statusIndicator.textContent = `Mapping matrix: ${Math.min(i + batchSize, htmlFiles.length)} of ${htmlFiles.length}...`;
+                await new Promise(r => setTimeout(r, 30));
+            }
+
+            statusIndicator.style.display = 'none';
+            matrixSearch.disabled = false;
+            renderMatrixGrid();
         });
 
-        function compileLibrary() {
-            statusLabel.textContent = "Packing files into final framework...";
+        function renderMatrixGrid(query = '') {
+            matrixContainer.innerHTML = '';
+            const sortedTitles = Object.keys(loadedMatrixData).sort();
             
-            const templateStart = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>My GitHub Arcade</title><style>:root { --bg: #0b0b0e; --panel: #141419; --accent: #2563eb; --text: #f4f4f5; --muted: #71717a; --border: #27272a; } body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; height: 100vh; overflow: hidden; } .sidebar { width: 300px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 1.5rem; box-sizing: border-box; } h2 { margin: 0 0 1rem 0; font-size: 1.3rem; } .search { background: var(--bg); border: 1px solid var(--border); color: #fff; padding: 0.6rem; border-radius: 6px; margin-bottom: 1rem; outline: none; font-size: 0.9rem; } .search:focus { border-color: var(--accent); } .list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.4rem; } .item { background: transparent; color: var(--text); border: none; padding: 0.6rem 0.8rem; text-align: left; border-radius: 6px; cursor: pointer; font-size: 0.9rem; text-transform: capitalize; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .item:hover { background: #27272a; } .item.active { background: var(--accent); color: #fff; font-weight: bold; } .stage { flex: 1; background: var(--bg); position: relative; } iframe { width: 100%; height: 100%; border: none; background: #fff; display: none; } .welcome { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: var(--muted); }</style></head><body><div class="sidebar"><h2>🕹️ My GitHub Arcade</h2><input type="text" class="search" id="search" placeholder="Search games..."><div class="list" id="list"></div></div><div class="stage"><div class="welcome" id="welcome"><h3>Select a game to start playing!</h3></div><iframe id="frame" sandbox="allow-scripts allow-same-origin"></iframe></div><script>const games = ';
+            let matchCounter = 0;
+            sortedTitles.forEach(title => {
+                if (title.toLowerCase().includes(query.toLowerCase())) {
+                    matchCounter++;
+                    const rowButton = document.createElement('button');
+                    rowButton.className = 'game-item';
+                    rowButton.textContent = title;
+                    rowButton.onclick = () => deployMatrixGame(title, rowButton);
+                    matrixContainer.appendChild(rowButton);
+                }
+            });
 
-            const gamesJson = JSON.stringify(compiledData);
+            if (matchCounter === 0 && Object.keys(loadedMatrixData).length > 0) {
+                matrixContainer.innerHTML = '<div style="color:var(--muted); font-size:0.85rem; text-align:center; padding-top:1rem;">No results in matrix</div>';
+            }
+        }
 
-            const templateEnd = '; const list = document.getElementById("list"); const frame = document.getElementById("frame"); const welcome = document.getElementById("welcome"); const search = document.getElementById("search"); function buildList(filter = "") { list.innerHTML = ""; Object.keys(games).sort().forEach(key => { if(key.toLowerCase().includes(filter.toLowerCase())) { const btn = document.createElement("button"); btn.className = "item"; btn.textContent = key; btn.onclick = () => { document.querySelectorAll(".item").forEach(b => b.classList.remove("active")); btn.classList.add("active"); welcome.style.display = "none"; frame.style.display = "block"; const blob = new Blob([games[key]], {type: "text/html"}); frame.src = URL.createObjectURL(blob); }; list.appendChild(btn); } }); } search.addEventListener("input", e => buildList(e.target.value)); buildList(); <\/script></body></html>';
+        matrixSearch.addEventListener('input', (e) => renderMatrixGrid(e.target.value));
 
-            const finalHtmlContent = templateStart + gamesJson + templateEnd;
+        function deployMatrixGame(title, clickedButton) {
+            document.querySelectorAll('.game-item').forEach(el => el.classList.remove('active'));
+            clickedButton.classList.add('active');
+
+            welcomeBanner.style.display = 'none';
+            matrixFrame.style.display = 'block';
+
+            const rawContent = loadedMatrixData[title];
+            const dataBlob = new Blob([rawContent], { type: 'text/html' });
             
-            const blob = new Blob([finalHtmlContent], { type: 'text/html' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'index.html';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            successBox.style.display = 'block';
+            matrixFrame.src = URL.createObjectURL(dataBlob);
+        }
+    </script>
+</body>
+</html>
