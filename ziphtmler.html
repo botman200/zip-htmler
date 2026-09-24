@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZIP Arcade Explorer</title>
+    <!-- Secure, client-side open-source unzip wrapper library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        :root {
+            --bg: #0d0d11;
+            --panel: #16161f;
+            --accent: #10b981;
+            --text: #f4f4f5;
+            --muted: #71717a;
+            --border: #27272a;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        /* Sidebar layout for game listings */
+        .sidebar {
+            width: 320px;
+            background-color: var(--panel);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            box-sizing: border-box;
+        }
+        .sidebar h2 { margin: 0 0 1rem 0; font-size: 1.3rem; }
+        
+        /* Custom Upload elements */
+        .zip-label {
+            background: #27272a;
+            border: 1px dashed var(--muted);
+            padding: 0.75rem;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: block;
+            margin-bottom: 1rem;
+        }
+        .zip-label:hover { border-color: var(--accent); color: var(--accent); }
+        input[type="file"] { display: none; }
+        
+        .search-box {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: #fff;
+            padding: 0.6rem 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            outline: none;
+            font-size: 0.9rem;
+        }
+        .search-box:focus { border-color: var(--accent); }
+
+        .game-list {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+        .game-item {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid transparent;
+            padding: 0.6rem 0.8rem;
+            text-align: left;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .game-item:hover { background: #27272a; }
+        .game-item.active { background: var(--accent); color: #000; font-weight: 600; }
+
+        /* Core Game Iframe Stage */
+        .stage {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg);
+            position: relative;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #fff; /* Most standalone raw games assume a standard white wrapper */
+        }
+        .status-banner {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center; color: var(--muted);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>📦 ZIP Archive Station</h2>
+        <label class="zip-label">
+            ⚡ Drop / Load Game ZIP
+            <input type="file" id="zipPicker" accept=".zip">
+        </label>
+        <input type="text" id="search" class="search-box" placeholder="Search through games..." disabled>
+        <div id="loadingMsg" style="display:none; color:var(--accent); font-size:0.85rem; margin-bottom:1rem;">Reading ZIP directory...</div>
+        <div class="game-list" id="listContainer"></div>
+    </div>
+
+    <div class="stage">
+        <div class="status-banner" id="banner">
+            <h3>No Active Game Installed</h3>
+            <p>Upload your downloaded <strong>CoolDude2349 Games ZIP</strong> on the sidebar to render the app pack.</p>
+        </div>
+        <iframe id="gameFrame" style="display: none;" sandbox="allow-scripts allow-same-origin"></iframe>
+    </div>
+
+    <script>
+        let unzippedFiles = {}; 
+        const zipPicker = document.getElementById('zipPicker');
+        const searchBox = document.getElementById('search');
+        const listContainer = document.getElementById('listContainer');
+        const loadingMsg = document.getElementById('loadingMsg');
+        const gameFrame = document.getElementById('gameFrame');
+        const banner = document.getElementById('banner');
+
+        zipPicker.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            loadingMsg.style.display = 'block';
+            listContainer.innerHTML = '';
+            unzippedFiles = {};
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                // Initialize the JSZip engine locally
+                JSZip.loadAsync(evt.target.result).then(function(zip) {
+                    let promises = [];
+                    
+                    // Loop through inside the zip object to find files ending in .html
+                    zip.forEach((relativePath, zipEntry) => {
+                        if (!zipEntry.dir && relativePath.toLowerCase().endsWith('.html')) {
+                            // Extract file structure and convert into a text promise
+                            let p = zipEntry.async("string").then(content => {
+                                // Clean up path names for the sidebar display names
+                                let cleanName = relativePath.split('/').pop().replace('.html', '');
+                                if (cleanName.toLowerCase() !== 'index' && cleanName.trim() !== '') {
+                                    unzippedFiles[cleanName] = content;
+                                }
+                            });
+                            promises.push(p);
+                        }
+                    });
+
+                    // Once all text streams are parsed, render the game registry layout
+                    Promise.all(promises).then(() => {
+                        loadingMsg.style.display = 'none';
+                        searchBox.disabled = false;
+                        buildList();
+                    });
+                }).catch(err => {
+                    alert("Error reading zip structure: " + err.message);
+                    loadingMsg.style.display = 'none';
+                });
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        function buildList(filter = '') {
+            listContainer.innerHTML = '';
+            const keys = Object.keys(unzippedFiles).sort();
+            
+            let matched = 0;
+            keys.forEach(key => {
+                if (key.toLowerCase().includes(filter.toLowerCase())) {
+                    matched++;
+                    const btn = document.createElement('button');
+                    btn.className = 'game-item';
+                    btn.textContent = key.replace(/-/g, ' ');
+                    btn.onclick = () => launchGame(key, btn);
+                    listContainer.appendChild(btn);
+                }
+            });
+            if(matched === 0 && Object.keys(unzippedFiles).length > 0) {
+                listContainer.innerHTML = '<div style="color:var(--muted); font-size:0.85rem; text-align:center;">No matching titles found</div>';
+            }
+        }
+
+        // Live search bar filter callback
+        searchBox.addEventListener('input', (e) => buildList(e.target.value));
+
+        function launchGame(key, element) {
+            document.querySelectorAll('.game-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+
+            banner.style.display = 'none';
+            gameFrame.style.display = 'block';
+
+            // Compile the extracted code into a completely localized browser blob URL environment
+            const code = unzippedFiles[key];
+            const blob = new Blob([code], { type: 'text/html' });
+            const blobUrl = URL.createObjectURL(blob);
+
+            // Inject blob path into iframe workspace securely
+            gameFrame.src = blobUrl;
+        }
+    </script>
+</body>
+</html>
